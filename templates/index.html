@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Brain Tumor Detection</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #101820;
+      color: #fff;
+      text-align: center;
+      padding: 40px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #1a1a1a;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+    input[type="file"] {
+      margin: 20px;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    button {
+      background-color: #0078d7;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #005fa3;
+    }
+    img {
+      max-width: 90%;
+      margin: 15px;
+      border-radius: 10px;
+    }
+    h2 { color: #00ffcc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧠 Brain Tumor Detection using CNN</h1>
+    <form action="/predict" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" required>
+      <br>
+      <button type="submit">Analyze MRI</button>
+    </form>
+
+    {% if result %}
+      <h2>Prediction: {{ result }}</h2>
+      <p>Confidence: {{ prob }}</p>
+      <div>
+        <h3>Original MRI:</h3>
+        <img src="{{ original_image }}" alt="Original MRI">
+        {% if heatmap_image %}
+        <h3>Highlighted Tumor Region:</h3>
+        <img src="{{ heatmap_image }}" alt="Heatmap">
+        {% else %}
+        <p style="color: #ff6b6b;">Note: Grad-CAM visualization could not be generated.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

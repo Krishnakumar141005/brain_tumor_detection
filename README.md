@@ -48,12 +48,12 @@ See **[VS_CODE_SETUP.md](VS_CODE_SETUP.md)** for detailed step-by-step instructi
    ```bash
    python app.py
    ```
-   Open http://127.0.0.1:5000 in your browser
+   Open http://127.0.0.1:5000 in your browser. On first launch, an `auth.db` SQLite database is created automatically for user accounts.
 
 ## 📁 Project Structure
 ```
 brain_tumor_project/
-├── app.py              # Flask web application
+├── app.py              # Flask web application with authentication + Grad-CAM workflow
 ├── train.py            # Model training script (trains on data/)
 ├── demo_predict.py     # Demo prediction script
 ├── model.h5            # Trained model (created after training)
@@ -61,9 +61,26 @@ brain_tumor_project/
 ├── data/               # Dataset folder
 │   ├── train/          # Training images (tumor/ and no_tumor/)
 │   └── val/            # Validation images (tumor/ and no_tumor/)
-├── templates/          # HTML templates
+├── templates/          # HTML templates (includes auth views + dashboard)
 └── static/             # Static files (uploads/)
 ```
+
+## 🔐 Authentication & Dashboard
+
+- Modern UI with gradient branding, responsive layout (Bootstrap 5) and glassmorphism styling.
+- User accounts backed by Flask-Login + SQLAlchemy (`auth.db`).
+- Secure password hashing via Werkzeug.
+- Flash messages for feedback and a navigation bar with login/logout controls.
+- MRI upload workflow is restricted to authenticated users.
+
+### Managing Accounts
+
+1. Visit `/register` to create a profile (name, email, password).
+2. Log in via `/login`, upload MRIs from the dashboard, and view Grad-CAM explanations.
+3. Use `/logout` to end the session.
+
+> **Tip:** Set a stronger secret key for production  
+> `set SECRET_KEY="your-production-secret"` (PowerShell) before starting the app.
 
 ## 🎯 Using a Real Dataset
 

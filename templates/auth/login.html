@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-5 col-md-7">
+    <div class="glass-card p-4 p-md-5">
+      <h2 class="fw-bold text-white mb-1 text-center">Welcome Back</h2>
+      <p class="text-white-50 text-center mb-4">Sign in to access the brain tumor diagnostics workspace.</p>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          <label class="form-label text-white-50">Email address</label>
+          {{ form.email(class="form-control form-control-lg", placeholder="name@example.com") }}
+          {% if form.email.errors %}
+            <div class="form-text text-danger">{{ form.email.errors[0] }}</div>
+          {% endif %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-white-50">Password</label>
+          {{ form.password(class="form-control form-control-lg", placeholder="••••••") }}
+          {% if form.password.errors %}
+            <div class="form-text text-danger">{{ form.password.errors[0] }}</div>
+          {% endif %}
+        </div>
+        <div class="d-grid mt-4">
+          {{ form.submit(class="btn btn-gradient btn-lg py-2") }}
+        </div>
+      </form>
+      <p class="text-white-50 text-center mt-4 mb-0">
+        Don't have an account yet?
+        <a href="{{ url_for('register') }}" class="text-decoration-none text-info">Create one</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

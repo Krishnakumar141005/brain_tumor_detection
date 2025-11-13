@@ -1,9 +1,13 @@
 flask
-tensorflow==2.18.0
-keras==3.5.0
+tensorflow==2.16.1
+keras==3.3.3
 pillow
 matplotlib
 numpy<2.0
 opencv-python
 h5py==3.11.0
 optree==0.17.0
+flask-login
+flask-wtf
+flask-sqlalchemy
+email-validator

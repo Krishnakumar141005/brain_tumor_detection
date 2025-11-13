@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, flash
 import numpy as np
 import tensorflow as tf
 import keras
@@ -6,10 +6,71 @@ from keras.models import load_model
 import cv2, os
 from PIL import Image
 import matplotlib.pyplot as plt
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import (
+    LoginManager,
+    login_user,
+    login_required,
+    logout_user,
+    current_user,
+    UserMixin,
+)
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Email, Length, EqualTo
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # ------------------- Flask App Setup -------------------
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "static/uploads"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key")
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///auth.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
+
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+
+    def set_password(self, password: str) -> None:
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+class RegistrationForm(FlaskForm):
+    name = StringField("Full Name", validators=[DataRequired(), Length(min=3, max=120)])
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=120)])
+    password = PasswordField(
+        "Password",
+        validators=[
+            DataRequired(),
+            Length(min=6, message="Password must be at least 6 characters long."),
+        ],
+    )
+    confirm_password = PasswordField(
+        "Confirm Password",
+        validators=[DataRequired(), EqualTo("password", message="Passwords must match.")],
+    )
+    submit = SubmitField("Create Account")
+
+
+class LoginForm(FlaskForm):
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    password = PasswordField("Password", validators=[DataRequired()])
+    submit = SubmitField("Log In")
 
 # Create uploads directory if it doesn't exist
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -29,7 +90,7 @@ _ = model.predict(dummy_input, verbose=0)
 def find_last_conv_layer(model):
     """Find the last convolutional layer in the model."""
     for layer in reversed(model.layers):
-        if isinstance(layer, tf.keras.layers.Conv2D):
+        if isinstance(layer, keras.layers.Conv2D):
             return layer.name
     return None
 
@@ -49,7 +110,7 @@ def get_gradcam_heatmap(img_array, model, last_conv_layer_name=None):
     except ValueError:
         raise ValueError(f"Layer '{last_conv_layer_name}' not found in model. Available layers: {[l.name for l in model.layers]}")
     
-    grad_model = tf.keras.models.Model(
+    grad_model = keras.Model(
         [model.inputs],
         [last_conv_layer.output, model.output]
     )
@@ -105,7 +166,59 @@ def overlay_heatmap(heatmap, image_path, alpha=0.4):
 def home():
     return render_template("index.html")
 
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
+
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        existing_user = User.query.filter_by(email=form.email.data.lower()).first()
+        if existing_user:
+            flash("An account with that email already exists. Please log in.", "danger")
+        else:
+            user = User(
+                full_name=form.name.data.strip(),
+                email=form.email.data.lower(),
+            )
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            flash("Account created successfully! Please log in.", "success")
+            return redirect(url_for("login"))
+
+    return render_template("auth/register.html", form=form)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
+
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data.lower()).first()
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            flash("Welcome back!", "success")
+            next_page = request.args.get("next")
+            return redirect(next_page or url_for("home"))
+        flash("Invalid email or password. Please try again.", "danger")
+
+    return render_template("auth/login.html", form=form)
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("You have been logged out.", "info")
+    return redirect(url_for("login"))
+
+
 @app.route("/predict", methods=["POST"])
+@login_required
 def predict():
     if "file" not in request.files:
         return render_template("index.html", result="No file uploaded!")
@@ -155,4 +268,6 @@ def predict():
 
 # ------------------- Run App -------------------
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
